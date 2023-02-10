@@ -8,8 +8,8 @@
 cleanup() {
     for session in $(screen -ls | grep -o '[0-9]*\.geneva'); do screen -S "${session}" -X quit; done
     iptables -F
-    iptables -I OUTPUT -p tcp --tcp-flags RST,ACK RST,ACK -j DROP
-    iptables -I OUTPUT -p tcp --tcp-flags RST RST -j DROP
+    iptables -I OUTPUT -p tcp --tcp-flags RST,ACK RST,ACK -d 95.85.96.0/19 -j DROP
+    iptables -I OUTPUT -p tcp --tcp-flags RST RST -d 95.85.96.0/19 -j DROP
 }
 
 # Obtain command line arguments for server's IP address, censored domain, 
