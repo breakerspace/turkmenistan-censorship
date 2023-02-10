@@ -207,42 +207,50 @@ that the TCB Teardown via RST strategy,
 
 #### **HTTP**
 To use the transport layer strategies outlined in our paper to evade
-HTTP censorship, we can run the bash script,
-`transport_http_evasion_strategies.sh`, with the IP address of the
-HTTP server we would like to talk to, a censored domain, the source
-port, and the destination port/port of the HTTP server. This
-destination port must be a port designated for HTTP traffic. This
-script clones the geneva repository from Github and runs Geneva's
-engine in the background. The bash script then iterates through the
-strategies and executes a curl command for each strategy. The engine
-picks up the packets from the curl command, manipulates them based on
-the current strategy, and then sends them off to the HTTP server. We
-can run the script as follows:
+HTTP censorship, you can run the bash script
+`transport_http_evasion_strategies.sh`, with (1) the IP address of the
+HTTP server we would like to communicate with, (2) a censored domain,
+(3) the source port, and (4) the destination port/port of the HTTP
+server. This destination port must be a port designated for HTTP
+traffic. This script clones the [Geneva
+repository](https://github.com/Kkevsterrr/geneva) and runs its engine
+in the background. The bash script then iterates through the
+strategies and executes a `curl` command for each strategy. The engine
+picks up the packets from the `curl` command, manipulates them based
+on the current strategy, and then sends them off to the HTTP server.
+We can run the script as follows:
+
 ```
 $ sudo ./transport_http_evasion_strategies.sh 95.85.96.78 twitter.com 6722 80
 ```
+
 In addition, we need to run `tcpdump` simultaneously as well:
+
 ```
 $ sudo tcpdump -i any -nvA host 95.85.96.78
 ```
-We can confirm censorship on this IP address with a simple curl
-command, such as `curl -H "Host: twitter.com:95.85.96.78:80`, and
-observe that the censor sends a RST after the PSH+ACK packet. However,
+
+We can confirm censorship on this IP address with a simple `curl`
+command, such as `curl -H "Host: twitter.com" 95.85.96.78:80`, and
+observe that the censor injects a RST after observing the PSH+ACK
+packet containing the censored domain, i.e., *twitter.com*. However,
 when Geneva runs the evasion strategies for HTTP, we will not see any
 RSTs with the censor's signature in our `tcpdump` and the request will
 go through to the server.
+
 #### **HTTPS**
-To use the transport layer strategies to evade HTTPS censorship, we
+To use the transport layer strategies to evade HTTPS censorship, you
 can run the bash script, `transport_https_evasion_strategies.sh`, with
-the IP address of the HTTPS server we would like to talk to, a
-censored domain, the source port, and the destination port/port of the
-HTTPS server. This destination port must be a port designated for
-HTTPS traffic so this value should almost always be 443. This script
-clones the geneva repository from Github and runs Geneva's engine in
-the background. The bash script then iterates through the strategies
-and executes a curl command for each strategy. The engine picks up
-these packets, manipulates them based on the current strategy, and
-then sends them off to the HTTPS server.
+(1) the IP address of the HTTPS server we would like to communicate
+with, (2) a censored domain, (3) the source port, and (4) the
+destination port/port of the HTTPS server. This destination port must
+be a port designated for HTTPS traffic so this value should almost
+always be 443. This script also clones the [Geneva
+repository](https://github.com/Kkevsterrr/geneva) and runs its engine
+in the background. The bash script then iterates through the
+strategies and executes a `curl` command for each strategy. The engine
+picks up these packets, manipulates them based on the current
+strategy, and then sends them off to the HTTPS server.
 ```
 $ sudo ./transport_https_evasion_strategies.sh 95.85.96.78 twitter.com 7878 443
 ```
@@ -252,75 +260,84 @@ $ sudo tcpdump -i any -nvA host 95.85.96.78
 ```
 We observe that we do not receive the RST from the censor when we send
 a PSH+ACK packet a Client Hello payload containing `twitter.com` in
-the SNI field. We can compare this to sending a simple curl command,
+the SNI field. We can compare this to sending a simple `curl` command,
 `curl --local-port 7878 --connect-to ::95.85.96.78:443
-https://twitter.com/` and confirm that we do see censorship when we do
-not deploy the evasion strategy.
+https://twitter.com/` and confirm that we can observe censorship when
+the evasion strategy is not deployed.
 
 ### Application Layer
 Geneva discovered the application-layer evasion strategies using an
 application-layer specific plugin. This plugin has not been released
-to the public as of the writing of this submission, and therefore we
-are not able to write bash scripts to automate the process of running
-Geneva to evade censorship. However, we implemented these
-application-layer evasion strategies manually by manipulating the
-packets containing the censored request. These scripts are detailed
-below.
+to the public as of the writing of this artifact submission, and
+therefore we are not able to write bash scripts to automate the
+process of running Geneva to evade censorship at the application layer
+yet. However, we implemented these application-layer evasion
+strategies manually by manipulating the packets containing the
+censored request. These scripts are detailed below.
 
 #### **DNS**
 In order to evade DNS censorship, we can run the
-`application_dns_evasion_strategy.py` script. This script takes in an
-IP address to a DNS server (i.e. it must have port 53 open) and a
-censored domain. The script crafts a DNS packet using the provided
-arguments, sets the `ancount` field to 32, and then sends the packet
-to the DNS server. This strategy is noted in our paper as
-`[DNS:*:*]-tamper{DNS:ancount:replace:32}-| \/`. The script can be
-used as follows:
+`application_dns_evasion_strategy.py` script. This script takes in (1)
+an IP address to a DNS server (i.e., it must have port 53 open to
+accept incoming queries) and (2) a censored domain. The script crafts
+a DNS packet using the provided arguments, sets the `ancount` field to
+32, and then sends the packet to the DNS server. This strategy is
+noted in our paper as `[DNS:*:*]-tamper{DNS:ancount:replace:32}-| \/`.
+The script can be executed as follows:
+
 ```
 $ sudo python3 application_dns_evasion_strategy.py --ip 95.85.97.78 --censored-domain twitter.com
 ```
-We need to run `tcpdump` simultaneously as well:
+
+We need to run `tcpdump` simultaneously as well to observe uncensored response from the resolver:
+
 ```
 $ sudo tcpdump -i any -nvA host 95.85.97.78
 tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 262144 bytes
-18:12:54.738689 IP (tos 0x0, ttl 64, id 1, offset 0, flags [none], proto UDP (17), length 57)
+17:42:54.738689 IP (tos 0x0, ttl 64, id 1, offset 0, flags [none], proto UDP (17), length 57)
     172.31.40.121.53 > 95.85.97.78.53: 0+ [32a] A? twitter.com. (29)
-18:12:55.012336 IP (tos 0x0, ttl 36, id 23390, offset 0, flags [none], proto UDP (17), length 40)
+17:42:55.012336 IP (tos 0x0, ttl 36, id 24490, offset 0, flags [none], proto UDP (17), length 40)
     95.85.97.78.53 > 172.31.40.121.53: 0 Refused- [0q] 0/0/0 (12)
-18:12:55.012412 IP (tos 0xc0, ttl 64, id 25466, offset 0, flags [none], proto ICMP (1), length 68)
+17:42:55.012412 IP (tos 0xc0, ttl 64, id 25466, offset 0, flags [none], proto ICMP (1), length 68)
     172.31.40.121 > 95.85.97.78: ICMP 172.31.40.121 udp port 53 unreachable, length 48
-	IP (tos 0x0, ttl 36, id 23390, offset 0, flags [none], proto UDP (17), length 40)
+	IP (tos 0x0, ttl 36, id 24490, offset 0, flags [none], proto UDP (17), length 40)
     95.85.97.78.53 > 172.31.40.121.53: 0 Refused- [0q] 0/0/0 (12)
 ```
 We can confirm that we do not see censorship as we do not receive a
 dummy IP address of `127.0.0.1` from the censor.
+
 #### **HTTP**
-In order to evade HTTP censorship at the application level, we can run
-the `application_http_evasion_strategies.py` script. This script takes
-in an IP address of the HTTP server we would like to talk to, a
-censored domain, the destination port/port of the HTTP server, and a
-number that corresponds to which application-layer HTTP strategy to
-run. Please note that the destination port must be a port designated
-for HTTP traffic. The script completes a three way handshake with the
-server and then sends a PSH+ACK packet with an HTTP GET request to the
-censored domain. We can run the script as follows:
+In order to evade HTTP censorship at the application level, you can
+run the `application_http_evasion_strategies.py` script. This script
+takes in (1) an IP address of the HTTP server we would like to talk
+to, (2) a censored domain, (3) the destination port/port of the HTTP
+server, and (4) a number that corresponds to which application-layer
+HTTP strategy to run. Please note that the destination port must be a
+port designated for HTTP traffic. The script completes a three way
+handshake with the server and then sends a PSH+ACK packet with an HTTP
+GET request to the censored domain. We can run the script as follows:
+
 ```
 $ sudo python3 application_http_evasion_strategies.py --ip 95.85.96.78 --censored-domain twitter.com --sport 7878 --dport 80 --strategy 1
 ```
+
 Please note that we need to provide a number to the `--strategy`
 argument. The following table maps this number to the corresponding
-strategies: | Number    | Strategy      | | --------- | -------------
-| |1     | `[HTTP:host:*]-insert{%09%0A:start:value:1}-\| \/`| |2
-| `[HTTP:version:*]-insert{%20%0A%09:end:value:1}-\| \/`        | |3
-| `[HTTP:method:*]-insert{%0A:start:value:1}-\| \/`| |4     |
-`[HTTP:host:*]-insert{%20:end:value:3391}(duplicate(duplicate(,replace{a:name:1}),insert{%09:start:name:1}),)-\|
-\/` or <br
-/>`[HTTP:host:*]-insert{%20:end:value:3391}(duplicate(duplicate(insert{%09:start:name:1},),replace{a:name:1}),)-\|\/`|
+strategies:
+
+| Number    | Strategy      |
+| --------- | ------------- |
+|1     | `[HTTP:host:*]-insert{%09%0A:start:value:1}-\| \/`|
+|2     | `[HTTP:version:*]-insert{%20%0A%09:end:value:1}-\| \/`        |
+|3     | `[HTTP:method:*]-insert{%0A:start:value:1}-\| \/`|
+|4     | `[HTTP:host:*]-insert{%20:end:value:3391}(duplicate(duplicate(,replace{a:name:1}),insert{%09:start:name:1}),)-\| \/` or <br />`[HTTP:host:*]-insert{%20:end:value:3391}(duplicate(duplicate(insert{%09:start:name:1},),replace{a:name:1}),)-\|\/`|
 
 We need to run `tcpdump` simultaneously as well:
+
 ```
 $ sudo tcpdump -i any -nvA host 95.85.97.78
 ```
+
 We can confirm that we do not receive any RSTs from the censor via our
 `tcpdump`.
 
