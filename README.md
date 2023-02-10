@@ -20,7 +20,7 @@ these IP addresses, you can run the `drop_outbound_rsts.sh` shell
 script we have provided (`sudo` needed). Please make all shell scripts
 executable and ensure you have root privilege before evaluating this
 artifact since it will need to **alter the `iptables`** of your testing
-machine. In addition, pleasure ensure you have scapy version 2.4.3
+machine. In addition, please ensure you have scapy version 2.4.3
 installed as well.
 
 ### Disclaimer
