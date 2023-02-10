@@ -27,8 +27,8 @@ installed as well.
 The artifact that we have provided are designed to trick and confuse
 the firewall and censoring system of Turkmenistan. Even though this
 artifact may be evaluated from a machine outside of Turkmenistan,
-Turkmenistan is known to be adversarial and may block IP addresses of
-the from aggressive probing machines. Please understand the risks of
+Turkmenistan is known to be adversarial and may block IP addresses 
+from aggressive probing machines. Please understand the risks of
 evaluating this artifact before doing so.
 
 ## 1. Triggering DNS, HTTP, and HTTPS Censorship
