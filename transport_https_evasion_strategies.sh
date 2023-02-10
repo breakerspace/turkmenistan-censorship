@@ -6,7 +6,7 @@
 # Function that will kill the engine running in the background and
 # reset iptables
 cleanup() {
-    screen -S geneva -X quit 2> /dev/null
+    for session in $(screen -ls | grep -o '[0-9]*\.geneva'); do screen -S "${session}" -X quit; done
     iptables -F
     iptables -I OUTPUT -p tcp --tcp-flags RST,ACK RST,ACK -j DROP
     iptables -I OUTPUT -p tcp --tcp-flags RST RST -j DROP
@@ -20,7 +20,7 @@ sport=$3
 dport=$4
 
 # Create an array of all the strategies to be tested
-declare -a strategies=("[TCP:flags:PA]-fragment{tcp:4:True}-| \/" "[TCP:flags:S]-duplicate(,duplicate(tamper{TCP:flags:replace:R}(tamper{TCP:chksum:corrupt},),))-| \/" "[TCP:flags:S]-duplicate(tamper{TCP:flags:replace:R},)-| \/")
+declare -a strategies=("[TCP:flags:PA]-fragment{tcp:4:True}-| \/" "[TCP:flags:S]-duplicate(tamper{TCP:flags:replace:R},)-| \/")
 
 # Clone the Geneva repository and cd into it
 git clone https://github.com/Kkevsterrr/geneva.git
@@ -38,4 +38,5 @@ do
     sleep 1
     # Increment the source port by 1 for the next strategy
     sport=$((sport + 1))
+    cleanup
 done

@@ -3,12 +3,21 @@
 # Script to run Geneva's transport layer strategies on HTTP requests 
 # to a censored domain 
 
+# Function that will kill the engine running in the background and
+# reset iptables
+cleanup() {
+    for session in $(screen -ls | grep -o '[0-9]*\.geneva'); do screen -S "${session}" -X quit; done
+    iptables -F
+    iptables -I OUTPUT -p tcp --tcp-flags RST,ACK RST,ACK -j DROP
+    iptables -I OUTPUT -p tcp --tcp-flags RST RST -j DROP
+}
+
 # Obtain command line arguments for server's IP address, censored domain, 
-# and server/destination port. We do not need to obtain a source port as Geneva
-# will randomize the source port for us
+# server/destination port, and source port.
 ip_address=$1
 censored_domain=$2
-server_port=$3
+sport=$3
+dport=$4
 
 # Create an array of all the strategies to be tested
 declare -a strategies=("[TCP:flags:PA]-fragment{tcp:8:True}-| \/" "[TCP:flags:S]-duplicate(,duplicate(tamper{TCP:flags:replace:R}(tamper{TCP:chksum:corrupt},),))-| \/" "[TCP:flags:S]-duplicate(tamper{TCP:flags:replace:R},)-| \/")
@@ -17,10 +26,16 @@ declare -a strategies=("[TCP:flags:PA]-fragment{tcp:8:True}-| \/" "[TCP:flags:S]
 git clone https://github.com/Kkevsterrr/geneva.git
 cd geneva
 
-# Iterate through all of the strategies and run each one
+# Iterate through all of the strategies
 for i in "${strategies[@]}"
 do
     echo "Running Strategy:" $i
-    sudo python3 evolve.py --test-type http --protos http --log info --host-header $censored_domain -external-server --server $ip_address --port $server_port --bad-word $censored_domain --disable-port-negotiation --eval-only $i
+    # Run the Geneva engine in the background for the current strategy
+    screen -dmS geneva bash -c "python3 engine.py --server-port $dport --strategy \"$i\""
     sleep 1
+    # Execute a curl command to the censored domain via HTTPS
+    sudo curl --local-port $sport -H "Host: $censored_domain" $ip_address:$dport
+    sleep 1
+    # Increment the source port by 1 for the next strategy
+    sport=$((sport + 1))
 done
