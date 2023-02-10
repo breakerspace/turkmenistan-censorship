@@ -19,7 +19,8 @@ of Electro Communications Turkmentelecom. To drop RST packets towards
 these IP addresses, you can run the `drop_outbound_rsts.sh` shell
 script we have provided (`sudo` needed). Please make all shell scripts
 executable and ensure you have root privilege before evaluating this
-artifact.
+artifact since it will need to **alter the `iptables`** of your testing
+machine.
 
 ### Disclaimer
 The artifact that we have provided are designed to trick and confuse
