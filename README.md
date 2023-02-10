@@ -3,7 +3,7 @@
 ### Artifact Abstract
 Our paper includes one artifact for review which will all be available for open-access on our Github page (https://github.com/breakerspace/turkmenistan-censorship). This artifact consists of instructions and scripts to emulate how we triggerred DNS, HTTP, and HTTPS censorship for our measurement system, and how we evaded censorship across the same three protocols using both transport and application layer strategies discovered by Geneva.
 
-In order to correctly trigger and evade censorship as done within our study, you must have a machine outside of Turkmenistan and drop all outbound RSTs from your machine. To do so, you can run the `drop_outbound_rsts.sh` shell script we have provided. 
+In order to correctly trigger and evade censorship as done within our study, you must have a machine outside of Turkmenistan and drop all outbound RSTs from your machine. To do so, you can run the `drop_outbound_rsts.sh` shell script we have provided. Please make all shell scripts executable before evaluating this artifact.
 
 ### Disclaimer
 The artifact that we have provided are designed to trick and confuse the firewall and censoring system of Turkmenistan. Even though this artifact may be evaluated from a machine outside of Turkmenistan, Turkmenistan is known to be adversarial and may block IP addresses from probing machines. Please understand the risks of evaluating this artifact before doing so.
@@ -14,7 +14,7 @@ The following sections encompass the techniques we used to trigger DNS, HTTP and
 ### DNS
 To trigger DNS censorship within Turkmenistan, we can simply use the following command:
 ```
-$ dig @95.85.117.102 twitter.com
+$ dig @95.85.117.12 twitter.com
 ```
 We receive the following response from the censor:
 ```
@@ -50,7 +50,7 @@ The censor is known to have a fingerprint with an IPID of 30000 and an initial I
 ### HTTP
 To trigger HTTP censorship via an incomplete handshake, as we did in our measurement study, we can use the `http_censorship.py` script. This script takes in an IP address that experiences HTTP censorship in Turkmenistan, a censored domain, a source port for the outgoing packets, and a destination port for the IP address. The destination port need not be a port designated for HTTP traffic as Turkmenistan censors HTTP traffic on all ports. The script takes these arguments and crafts a PSH+ACK packet containing an HTTP GET request to twitter.com. The script then sends the PSH+ACK packet to the specified IP address, waits 5 seconds, and then sends the same PSH+ACK packet again. The script can be run as follows:
 ```
-$ sudo python3 tm_http_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 8763 --dport 5656
+$ sudo python3 http_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 8763 --dport 5656
 ```
 If we run tcpdump in parallel while running this command, we can see the following output:
 ```
@@ -77,7 +77,7 @@ Please note that we mustn't wait for exactly 5 seconds. We can wait anywhere bet
 ### HTTPS
 To trigger HTTPS censorship via an incomplete handshake, as we did in our measurement study, we can use the `https_censorship.py` script. This script takes in an IP address that experiences HTTPS censorship in Turkmenistan, a censored domain, a source port to be used for outgoing packets, and a destionation port for the IP address. Just like for HTTP, the destination port need not be a port designated for HTTPS traffic, as Turkmenistan censors HTTPS traffic on all ports. The script uses these arguments to construct a PSH+ACK packet with a Client Hello payload. The Client Hello payload has its SNI field set to the censored domain. The script sends the PSH+ACK packet, waits 5 seconds, and then sends the same PSH+ACK packet again. The script can be run as follows:
 ```
-$ sudo python3 tm_https_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 9377 --dport 8383
+$ sudo python3 https_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 9377 --dport 8383
 ```
 Again, if we run tcpdump in parallel while running this command, we can see the following output:
 ```
@@ -111,11 +111,11 @@ The following section details how to evade censorship in Turkmenistan across DNS
 ### Transport Layer
 The transport layer evasion strategies used in our paper consist of the following three strategies: `[TCP:flags:PA]-fragment{tcp:8:True}-| \/`, `[TCP:flags:S]-duplicate(,duplicate(tamper{TCP:flags:replace:R}(tamper{TCP:chksum:corrupt},),))-| \/`, and `[TCP:flags:S]-duplicate(tamper{TCP:flags:replace:R},)-| \/`. These strategies are implemented in bash scripts that we describe how to use below. 
 
-Please note that for HTTPS, our bash script fragments the PSH+ACK packet at a byte index of 4 instead of 8, as described in our paper.
+Please note that for HTTPS, our bash script fragments the PSH+ACK packet at a byte index of 4 instead of 8, as described in our paper. In addition, since the submission of our paper, we have discovered that the TCB Teardown via RST strategy, `[TCP:flags:S]-duplicate(,duplicate(tamper{TCP:flags:replace:R}(tamper{TCP:chksum:corrupt},),))-| \/` is no longer successful for HTTPS requests.
 #### **HTTP**
-To use the transport layer strategies outlined in our paper to evade HTTP censorship, we can run the bash script, `transport_http_evasion_strategies.sh`, with the IP address of the HTTP server we would like to talk to, the censored domain, and the destination port/port of the HTTP server. This destination port must be a port designated for HTTP traffic. This script clones the geneva repository from Github and runs the three transport layer strategies for HTTP using Geneva, one after the other, with a sleep of 1 second between each one. We can run the script as follows:
+To use the transport layer strategies outlined in our paper to evade HTTP censorship, we can run the bash script, `transport_http_evasion_strategies.sh`, with the IP address of the HTTP server we would like to talk to, the censored domain, the source port, and the destination port/port of the HTTP server. This destination port must be a port designated for HTTP traffic. This script clones the geneva repository from Github and runs Geneva's engine in the background. The bash script then iterates through the strategies and executes a curl command for each strategy. The engine picks up the packets from the curl command, manipulates them based on the current strategy, and then sends them off to the HTTP server. We can run the script as follows:
 ```
-$ sudo ./transport_http_evasion_strategies.sh 95.85.96.78 twitter.com 80
+$ sudo ./transport_http_evasion_strategies.sh 95.85.96.78 twitter.com 6722 80
 ```
 In addition, we need to run `tcpdump` simultaneously as well:
 ```
@@ -123,7 +123,7 @@ $ sudo tcpdump -i any -nvA host 95.85.96.78
 ```
 We can confirm censorship on this IP addrss with a simple curl command, such as `curl -H "Host: twitter.com:95.85.96.78:80`, and observe that the censor sends a RST after the PSH+ACK packet. However, when Geneva runs the evasion strategies for HTTP, we will not see any RSTs with the censor's signature in our `tcpdump` and the request will go through to the server.
 #### **HTTPS**
-To use the transport layer strategies to evade HTTPS censorship, we can run the bash script, `transport_https_evasion_strategies.sh`, with the IP address of the HTTPS server we would like to talk to, the censored domain, the source port, and the destination port/port of the HTTPS server. This destination port must be a port designated for HTTPS traffic so this value should almost always be 443. This script clones the geneva repository from Github, but instead of running the strategies directly, as done with HTTP, runs Geneva's engine in the background. The bash script then iterates through the strategies and executes a curl command for each strategy. The engine picks up these packets, manipulates them based on the current strategy, and then sends them off to the HTTPS server.
+To use the transport layer strategies to evade HTTPS censorship, we can run the bash script, `transport_https_evasion_strategies.sh`, with the IP address of the HTTPS server we would like to talk to, the censored domain, the source port, and the destination port/port of the HTTPS server. This destination port must be a port designated for HTTPS traffic so this value should almost always be 443. This script clones the geneva repository from Github and runs Geneva's engine in the background. The bash script then iterates through the strategies and executes a curl command for each strategy. The engine picks up these packets, manipulates them based on the current strategy, and then sends them off to the HTTPS server.
 ```
 $ sudo ./transport_https_evasion_strategies.sh 95.85.96.78 twitter.com 7878 443
 ```
@@ -158,7 +158,7 @@ We can confirm that we do not receive a dummy IP address fo `127.0.0.1` from the
 #### **HTTP**
 In order to evade HTTP censorship at the application level, we can run the `application_http_evasion_strategies.py` script. This script takes in an IP address of the HTTP server we would like to talk to, the censored domain, the destination port/port of the HTTP server, and a number that corresponds to which application-layer HTTP strategy to run. Please note that the destination port must be a port designated for HTTP traffic. The script completes a three way handshake with the server and then sends a PSH+ACK packet with an HTTP GET request to the censored domain. We can run the script as follows:
 ```
-$ sudo python3 application_https_evasion --ip 95.85.96.78 --censored-domain twitter.com --sport 7878 --dport 80 --strategy 1
+$ sudo python3 application_http_evasion_strategies.py --ip 95.85.96.78 --censored-domain twitter.com --sport 7878 --dport 80 --strategy 1
 ```
 Please note that we need to provide a number to the `--strategy` argument. The following table maps this number to the corresponding strategies:
 | Number    | Strategy      |
