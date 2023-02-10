@@ -37,12 +37,14 @@ measurement purposes.
 ### DNS
 To trigger a DNS injection from Turkmenistan's filtering middleboxes,
 we can simply use the following command:
-```
+
+```console
 $ dig @95.85.117.12 twitter.com
 ```
+
 The command would trigger the following response from the censor:
 
-```
+```console
 ; <<>> DiG 9.11.3-1ubuntu1.17-Ubuntu <<>> @95.85.117.12 twitter.com
 ; (1 server found)
 ;; global options: +cmd
@@ -65,7 +67,7 @@ twitter.com.		300	IN	A	127.0.0.1
 We can further confirm that the response is injected by the censor by
 running `tcpdump` in parallel with the `dig` command above:
 
-```
+```console
 $ sudo tcpdump -i any -nv host 95.85.117.12
 tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 262144 bytes
 16:48:23.949310 IP (tos 0x0, ttl 64, id 27767, offset 0, flags [none], proto UDP (17), length 80)
@@ -95,13 +97,14 @@ then sends the PSH+ACK packet to the specified IP address, waits 5
 seconds, and then sends the same PSH+ACK packet again. The script can
 be run as follows:
 
-```
+```console
 $ sudo python3 http_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 18462 --dport 48489
 ```
 
 If we run tcpdump in parallel while running this script, we can see
 the following output:
-```
+
+```console
 $ sudo tcpdump -i any -nv host 95.85.117.12 
 tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 262144 bytes
 17:19:16.618994 IP (tos 0x0, ttl 64, id 1, offset 0, flags [none], proto TCP (6), length 77)
@@ -143,13 +146,15 @@ construct a PSH+ACK packet with a Client Hello payload. The Client
 Hello payload has its SNI field set to the censored domain. The script
 sends the PSH+ACK packet, waits 5 seconds, and then sends the same
 PSH+ACK packet again. The script can be run as follows:
-```
+
+```console
 $ sudo python3 https_censorship.py --ip 95.85.117.12 --censored-domain twitter.com --sport 58235 --dport 6392
 ```
 Again, if we run tcpdump in parallel while running this command, we
 can see the following output:
-```
-$ sudo tcpdump -i any -nvA host 95.85.117.12 
+
+```console
+$ sudo tcpdump -i any -nvA host 95.85.117.12
 tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 262144 bytes
 09:52:03.278686 IP (tos 0x0, ttl 64, id 1, offset 0, flags [none], proto TCP (6), length 353)
     172.31.40.121.58235 > 95.85.117.12.6392: Flags [P.], cksum 0xe51c (correct), seq 101:414, ack 0, win 8192, length 313
@@ -220,13 +225,13 @@ picks up the packets from the `curl` command, manipulates them based
 on the current strategy, and then sends them off to the HTTP server.
 We can run the script as follows:
 
-```
+```console
 $ sudo ./transport_http_evasion_strategies.sh 95.85.96.78 twitter.com 6722 80
 ```
 
 In addition, we need to run `tcpdump` simultaneously as well:
 
-```
+```console
 $ sudo tcpdump -i any -nvA host 95.85.96.78
 ```
 
@@ -251,13 +256,17 @@ in the background. The bash script then iterates through the
 strategies and executes a `curl` command for each strategy. The engine
 picks up these packets, manipulates them based on the current
 strategy, and then sends them off to the HTTPS server.
-```
+
+```console
 $ sudo ./transport_https_evasion_strategies.sh 95.85.96.78 twitter.com 7878 443
 ```
+
 In addition, we need to run `tcpdump` simultaneously as well:
-```
+
+```console
 $ sudo tcpdump -i any -nvA host 95.85.96.78
 ```
+
 We observe that we do not receive the RST from the censor when we send
 a PSH+ACK packet a Client Hello payload containing `twitter.com` in
 the SNI field. We can compare this to sending a simple `curl` command,
@@ -285,13 +294,13 @@ a DNS packet using the provided arguments, sets the `ancount` field to
 noted in our paper as `[DNS:*:*]-tamper{DNS:ancount:replace:32}-| \/`.
 The script can be executed as follows:
 
-```
+```console
 $ sudo python3 application_dns_evasion_strategy.py --ip 95.85.97.78 --censored-domain twitter.com
 ```
 
 We need to run `tcpdump` simultaneously as well to observe uncensored response from the resolver:
 
-```
+```console
 $ sudo tcpdump -i any -nvA host 95.85.97.78
 tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 262144 bytes
 17:42:54.738689 IP (tos 0x0, ttl 64, id 1, offset 0, flags [none], proto UDP (17), length 57)
@@ -303,6 +312,7 @@ tcpdump: listening on any, link-type LINUX_SLL (Linux cooked), capture size 2621
 	IP (tos 0x0, ttl 36, id 24490, offset 0, flags [none], proto UDP (17), length 40)
     95.85.97.78.53 > 172.31.40.121.53: 0 Refused- [0q] 0/0/0 (12)
 ```
+
 We can confirm that we do not see censorship as we do not receive a
 dummy IP address of `127.0.0.1` from the censor.
 
@@ -317,7 +327,7 @@ port designated for HTTP traffic. The script completes a three way
 handshake with the server and then sends a PSH+ACK packet with an HTTP
 GET request to the censored domain. We can run the script as follows:
 
-```
+```console
 $ sudo python3 application_http_evasion_strategies.py --ip 95.85.96.78 --censored-domain twitter.com --sport 7878 --dport 80 --strategy 1
 ```
 
@@ -334,7 +344,7 @@ strategies:
 
 We need to run `tcpdump` simultaneously as well:
 
-```
+```console
 $ sudo tcpdump -i any -nvA host 95.85.97.78
 ```
 
@@ -346,3 +356,27 @@ addresses in our examples. These IP addresses have consistently been
 censored. However, please note that IP addresses may churn and, since
 Turkmenistan is known to censor only specific IP addresses even in the
 same `/24`, these IP addresses may not be censored in the future.
+
+
+## Citation
+
+In order for us to improve the project and provide insight into past
+uses of it, if you like the work or plan to any of the script in this
+repo for your projects, we would really appreciate for citing our WWW
+'23 paper:
+
+```BibTeX
+@inproceedings{Nourin2023:WWW,
+author     = {Sadia Nourin and Van Tran and Xi Jiang and Kevin Bock and Nick Feamster and Nguyen Phong Hoang and Dave Levin},
+title      = {{Measuring and Evading Turkmenistan's Internet Censorship}},
+booktitle  = {{The International World Wide Web Conference}},
+series     = {{WWW '23}},
+year       = {2023},
+}
+```
+
+ACM Reference Format:
+
+```BibTeX
+Sadia Nourin, Van Tran, Xi Jiang, Kevin Bock, Nick Feamster, Nguyen Phong Hoang, and Dave Levin. 2023. Measuring and Evading Turkmenistan’s Internet Censorship: A Case Study in Large-Scale Measurements of a Low- Penetration Country. In Proceedings of the ACM Web Conference 2023 (WWW ’23), May 1–5, 2023, Austin, TX, USA. ACM, New York, NY, USA, 11 pages. https://doi.org/10.1145/3543507.3583189
+```
