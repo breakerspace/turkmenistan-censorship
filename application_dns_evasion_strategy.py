@@ -17,9 +17,9 @@ def get_args():
     """
     Gets arguments from user.
     """
-    parser = argparse.ArgumentParser(description="Turkmenistan HTTP Censorship Trigger via Incomplete TCP Handshake")
+    parser = argparse.ArgumentParser(description="Turkmenistan Application-Layer DNS Evasion Strategy")
     parser.add_argument("--ip", type=str, help="IP address in Turkmenistan")
-    parser.add_argument("--censored-domain", type=str, help="censored domain to send in HTTP request")
+    parser.add_argument("--censored-domain", type=str, help="censored domain to send in DNS request")
     return parser.parse_args()
 
 if __name__ == "__main__":

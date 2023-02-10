@@ -22,4 +22,5 @@ for i in "${strategies[@]}"
 do
     echo "Running Strategy:" $i
     sudo python3 evolve.py --test-type http --protos http --log info --host-header $censored_domain -external-server --server $ip_address --port $server_port --bad-word $censored_domain --disable-port-negotiation --eval-only $i
+    sleep 1
 done
